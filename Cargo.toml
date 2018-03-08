@@ -1,0 +1,22 @@
+[package]
+name = "siege-editor"
+version = "0.1.0"
+authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
+license = "PPL-based"
+
+readme = "README.md"
+description = "Pixel art siege engine editor/animator/creator"
+
+repository = "https://github.com/tversteeg/pixel-siege-engines.git"
+keywords = ["gamedev", "sprite"]
+categories = ["rendering", "game-engines"]
+
+[badges]
+travis-ci = {repository = "tversteeg/pixel-siege-engines"}
+
+[workspace]
+
+[dependencies]
+siege = { path = "lib", version = "0" }
+minifb = "0.10"
+direct-gui = "0.1"

@@ -1,0 +1,18 @@
+[package]
+name = "siege"
+version = "0.1.0"
+authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
+license = "PPL-based"
+
+readme = "../README.md"
+description = "Render pixel art siege engines"
+
+repository = "https://github.com/tversteeg/pixel-siege-engines.git"
+keywords = ["gamedev", "sprite"]
+categories = ["rendering", "game-engines"]
+
+[badges]
+travis-ci = {repository = "tversteeg/pixel-siege-engines"}
+
+[dependencies]
+line_drawing = "0.7"
