@@ -8,4 +8,4 @@ cache: cargo
 addons:
   apt:
     packages:
-- xorg-dev
+      - xorg-dev
