@@ -7,7 +7,8 @@ use line_drawing::{Point, Bresenham, BresenhamCircle};
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Material {
     Wood,
-    Metal
+    Metal,
+    Rope
 }
 
 /// The parts of which a siege engine is build up.
