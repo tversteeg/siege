@@ -2,6 +2,7 @@
 name = "siege"
 version = "0.1.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
+license-file = "../LICENSE"
 
 readme = "../README.md"
 description = "Render pixel art siege engines"
