@@ -2,7 +2,6 @@
 name = "siege-editor"
 version = "0.1.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
-license = "PPL-based"
 
 readme = "README.md"
 description = "Pixel art siege engine editor/animator/creator"
