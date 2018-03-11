@@ -26,6 +26,31 @@ pub struct Beam {
     pub material: Material
 }
 
+impl Beam {
+    pub fn new(start: (i32, i32), end: (i32, i32), material: Material) -> Self {
+        Beam {
+            material,
+
+            start: (start.0 as f64, start.1 as f64),
+            end: (end.0 as f64, end.1 as f64),
+        }
+    }
+
+    pub fn draw(&self, dst: &mut [u32], dst_width: usize) {
+        let color = match self.material {
+            Material::Wood => 0x8F563B,
+            Material::Metal => 0x696A6A,
+            Material::Rope => 0xD9A066,
+        };
+
+        let start = (self.start.0 as i32, self.start.1 as i32);
+        let end = (self.end.0 as i32, self.end.1 as i32);
+        for (x, y) in Bresenham::new(start, end) {
+            dst[x as usize + y as usize * dst_width] = color;
+        }
+    }
+}
+
 /// A rotatable circle which is basically a circle with a material.
 #[derive(Debug)]
 pub struct Wheel {
@@ -52,7 +77,16 @@ impl Engine {
 
     /// Render the graphics of the siege engine to a buffer.
     pub fn render_to_buffer(&self, dst: &mut [u32], dst_width: usize) {
+        for part in self.parts.iter() {
+            if let &Part::Beam(ref beam) = part {
+                beam.draw(dst, dst_width);
+            }
+        }
+    }
 
+    /// Add a beam with the material.
+    pub fn add_beam(&mut self, start: (i32, i32), end: (i32, i32), material: Material) {
+        self.parts.push(Part::Beam(Beam::new(start, end, material)));
     }
 }
 

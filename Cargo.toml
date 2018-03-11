@@ -20,3 +20,4 @@ travis-ci = {repository = "tversteeg/pixel-siege-engines"}
 siege = { path = "lib", version = "0" }
 minifb = "0.10"
 direct-gui = "0.1"
+line_drawing = "0.7"
