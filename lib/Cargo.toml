@@ -7,12 +7,12 @@ license = "PPL-based"
 readme = "../README.md"
 description = "Render pixel art siege engines"
 
-repository = "https://github.com/tversteeg/pixel-siege-engines.git"
+repository = "https://github.com/tversteeg/siege.git"
 keywords = ["gamedev", "sprite"]
 categories = ["rendering", "game-engines"]
 
 [badges]
-travis-ci = {repository = "tversteeg/pixel-siege-engines"}
+travis-ci = {repository = "tversteeg/siege"}
 
 [dependencies]
 line_drawing = "0.7"
