@@ -36,15 +36,15 @@ impl Beam {
         }
     }
 
-    pub fn draw(&self, dst: &mut [u32], dst_width: usize) {
+    pub fn draw(&self, dst: &mut [u32], dst_width: usize, offset: (f64, f64)) {
         let color = match self.material {
             Material::Wood => 0x8F563B,
             Material::Metal => 0x696A6A,
             Material::Rope => 0xD9A066,
         };
 
-        let start = (self.start.0 as i32, self.start.1 as i32);
-        let end = (self.end.0 as i32, self.end.1 as i32);
+        let start = ((self.start.0 + offset.0) as i32, (self.start.1 + offset.1) as i32);
+        let end = ((self.end.0 + offset.0) as i32, (self.end.1 + offset.1) as i32);
         for (x, y) in Bresenham::new(start, end) {
             dst[x as usize + y as usize * dst_width] = color;
         }
@@ -79,7 +79,7 @@ impl Engine {
     pub fn render_to_buffer(&self, dst: &mut [u32], dst_width: usize) {
         for part in self.parts.iter() {
             if let &Part::Beam(ref beam) = part {
-                beam.draw(dst, dst_width);
+                beam.draw(dst, dst_width, self.pos);
             }
         }
     }
