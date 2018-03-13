@@ -77,8 +77,12 @@ impl Editor {
             for y in engine_preview_y.0 .. engine_preview_y.1 {
                 let color = dst[x + y * dst_width];
 
-                for x2 in 0..SCALE as usize {
-                    for y2 in 0..SCALE as usize {
+                for i in 0..SCALE as usize {
+                    dst[new.0 + i + new.1 * dst_width] = 0xDDDDDD;
+                    dst[new.0 + (new.1 + i) * dst_width] = 0xDDDDDD;
+                }
+                for x2 in 1..SCALE as usize {
+                    for y2 in 1..SCALE as usize {
                         dst[new.0 + x2 + (new.1 + y2) * dst_width] = color;
                     }
                 }
