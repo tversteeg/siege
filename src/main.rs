@@ -11,6 +11,12 @@ use direct_gui::controls::*;
 use siege::*;
 use editor::*;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum DrawTool {
+    Beam,
+    Wheel
+}
+
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
 
@@ -32,9 +38,16 @@ fn main() {
     let rope_button = gui.register(Button::new((32, 32), Color::from_u32(0xD9A066)).with_pos(4, 76));
     gui.register(Label::new(font).with_pos(40, 76).with_text("Rope"));
 
-    let mut selected_material = Material::Rope;
+    let wheel_button = gui.register(Button::new((32, 32), Color::from_u32(0xFFFFFF)).with_pos(4, 120));
+    gui.register(Label::new(font).with_pos(40, 120).with_text("Wheel"));
 
-    let mut editor = Editor::new(100, 4);
+    let beam_button = gui.register(Button::new((32, 32), Color::from_u32(0xFFFFFF)).with_pos(4, 156));
+    gui.register(Label::new(font).with_pos(40, 156).with_text("Beam"));
+
+    let mut selected_material = Material::Rope;
+    let mut selected_tool = DrawTool::Beam;
+
+    let mut editor = Editor::new(12 * SCALE, SCALE);
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let mut cs = ControlState {
@@ -60,9 +73,23 @@ fn main() {
                 if !cs.mouse_down && rope_button.pressed() {
                     selected_material = Material::Rope;
                 }
+
+                let wheel_button: &Button<Flat> = gui.get(wheel_button).unwrap();
+                if !cs.mouse_down && wheel_button.pressed() {
+                    selected_tool = DrawTool::Wheel;
+                }
+
+                let beam_button: &Button<Flat> = gui.get(beam_button).unwrap();
+                if !cs.mouse_down && beam_button.pressed() {
+                    selected_tool = DrawTool::Beam;
+                }
             }
 
-            editor.update((cs.mouse_pos.0, cs.mouse_pos.1, cs.mouse_down), Action::DrawBeam(selected_material));
+            let action = match selected_tool {
+                DrawTool::Wheel => Action::DrawWheel(selected_material),
+                DrawTool::Beam => Action::DrawBeam(selected_material),
+            };
+            editor.update((cs.mouse_pos.0, cs.mouse_pos.1, cs.mouse_down), action);
 
             gui.update(&cs);
         });

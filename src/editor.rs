@@ -2,7 +2,7 @@ use siege::*;
 
 use line_drawing::*;
 
-const SCALE: i32 = 8;
+pub const SCALE: i32 = 8;
 const EDITOR_SIZE: i32 = 40 * SCALE;
 
 pub enum Action {
@@ -46,6 +46,11 @@ impl Editor {
                         let scaled_draw = ((x - self.rect.0) / SCALE, (y - self.rect.1) / SCALE);
                         let scaled_mouse = ((mouse.0 - self.rect.0) / SCALE, (mouse.1 - self.rect.1) / SCALE);
                         self.engine.add_beam(scaled_draw, scaled_mouse, material);
+                    }
+                    if let Action::DrawWheel(material) = action {
+                        let scaled_draw = ((x - self.rect.0) / SCALE, (y - self.rect.1) / SCALE);
+                        let scaled_mouse = ((mouse.0 - self.rect.0) / SCALE, (mouse.1 - self.rect.1) / SCALE);
+                        self.engine.add_wheel(scaled_draw, scaled_mouse, material);
                     }
 
                     Status::None
@@ -94,11 +99,17 @@ impl Editor {
 
         match self.status {
             Status::Draw(start_x, start_y) => {
-                for (x, y) in Bresenham::new((start_x, start_y), (self.mouse.0, self.mouse.1)) {
+                for (x, y) in Bresenham::new((start_x / SCALE, start_y / SCALE), (self.mouse.0 / SCALE, self.mouse.1 / SCALE)) {
+                    let (x, y) = (x * SCALE, y * SCALE);
                     if x < self.rect.0 || x >= self.rect.2 || y < self.rect.1 || y >= self.rect.3 {
                         continue;
                     }
-                    dst[x as usize + y as usize * dst_width] = 0x00FF00;
+                    let (x, y) = (x as usize, y as usize);
+                    for x2 in 1..SCALE as usize {
+                        for y2 in 1..SCALE as usize {
+                            dst[x + x2 + (y + y2) * dst_width] = 0x00FF00;
+                        }
+                    }
                 }
             },
             _ => ()
