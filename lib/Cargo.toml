@@ -15,4 +15,4 @@ categories = ["rendering", "game-engines"]
 travis-ci = {repository = "tversteeg/siege"}
 
 [dependencies]
-line_drawing = "0.7"
+line_drawing = "0.8"
