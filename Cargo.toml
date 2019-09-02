@@ -18,6 +18,6 @@ travis-ci = {repository = "tversteeg/siege"}
 
 [dependencies]
 siege = { path = "lib", version = "0" }
-minifb = "0.12"
+minifb = "0.13"
 direct-gui = "0.1"
 line_drawing = "0.8"
