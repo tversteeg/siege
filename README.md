@@ -1,34 +1,72 @@
-[![Build Status](https://travis-ci.org/tversteeg/siege.svg?branch=master)](https://travis-ci.org/tversteeg/siege)
+<h1 align="center">
+	siege<br/>
+	<a href="https://github.com/tversteeg/siege/releases">
+		<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/linux.svg" width="18" height="18" />
+		<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/apple.svg" width="18" height="18" />
+		<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/windows.svg" width="18" height="18" />
+	</a>
+	<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/mozillafirefox.svg" width="18" height="18" />
+	<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/googlechrome.svg" width="18" height="18" />
+	<img src="https://cdn.rawgit.com/simple-icons/simple-icons/develop/icons/safari.svg" width="18" height="18" />
+</h1>
+<p align="center">
+	A game, you can play!
+</p>
+	
+<p align="center">
+	<a href="https://github.com/tversteeg/siege/actions"><img src="https://github.com/tversteeg/siege/workflows/CI/badge.svg" alt="CI"/></a>
+	<a href="https://crates.io/crates/siege"><img src="https://img.shields.io/crates/v/siege.svg" alt="Version"/></a>
+	<img src="https://img.shields.io/crates/l/siege.svg" alt="License"/>
+	<br/>
+</p>
 
-# siege-editor
+## Play
 
-[![Cargo](https://img.shields.io/crates/v/siege-editor.svg)](https://crates.io/crates/siege-editor) [![License: GPL-3.0](https://img.shields.io/crates/l/siege-editor.svg)](#license) [![Downloads](https://img.shields.io/crates/d/siege-editor.svg)](#downloads)
+Download the executable file from the [Releases](https://github.com/tversteeg/siege/releases) tab and execute it.
+
+### Linux
+
+You might have to change the permissions with:
+
+```bash
+chmod u+x siege-*
+```
+
+## Build
+
+You will need an up-to-date [Rust](https://rustup.rs/) setup.
+
+### Linux Dependencies
+
+To build it on linux you will need the X11, OpenGL & Alsa development libraries:
+
+```bash
+sudo apt install libasound2-dev libx11-dev libxi-dev libgl1-mesa-dev
+```
 
 ## Run
 
-On Linux you need the `xorg-dev` package as required by `minifb` -- `sudo apt install xorg-dev`
+### Native
 
-    cargo run --release
+You just need to run the following to compile & run the game after you've installed the dependencies:
 
-# siege (Library)
-
-A Rust library for procedurally rendering siege engines.
-
-[![Cargo](https://img.shields.io/crates/v/siege.svg)](https://crates.io/crates/siege) [![License: GPL-3.0](https://img.shields.io/crates/l/siege.svg)](#license) [![Downloads](https://img.shields.io/crates/d/siege.svg)](#downloads)
-
-### [Documentation](https://docs.rs/siege/)
-
-## Usage
-
-Add this to your `Cargo.toml`:
-
-```toml
-[dependencies]
-siege = "0.1"
+```bash
+cargo run --release
 ```
 
-And this to your crate root:
+### WASM
 
-```rust
-extern crate siege;
+Add the `wasm32` target to Rust, build it with that target & copy it to the root:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo build --release --target wasm32-unknown-unknown
+cp target/wasm32-unknown-unknown/release/siege.wasm .
+```
+
+Now we have to host the website:
+
+```bash
+cargo install basic-http-server
+basic-http-server .
 ```

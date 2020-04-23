@@ -1,23 +1,25 @@
 [package]
-name = "siege-editor"
-version = "0.1.2"
+name = "siege"
+version = "0.1.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
-license-file = "LICENSE"
-
+license = "AGPL-3.0-or-later"
+edition = "2018"
 readme = "README.md"
-description = "Pixel art siege engine editor/animator/creator"
-
-repository = "https://github.com/tversteeg/siege.git"
-keywords = ["gamedev", "sprite"]
-categories = ["rendering", "game-engines"]
+repository = "https://github.com/tversteeg/siege"
+documentation = "https://docs.rs/siege"
+description = ""
+keywords = []
+categories = []
 
 [badges]
-travis-ci = {repository = "tversteeg/siege"}
-
-[workspace]
+is-it-maintained-issue-resolution = { repository = "tversteeg/siege" }
+is-it-maintained-open-issues = { repository = "tversteeg/siege" }
 
 [dependencies]
-siege = { path = "lib", version = "0" }
-minifb = "0.14"
-direct-gui = "0.1"
-line_drawing = "0.8"
+anyhow = "1.0.28"
+hibitset = "0.6.3"
+legion = "0.2.1"
+lyon = { version = "0.15.6", features = ["extra"] }
+miniquad = "0.2.55"
+usvg = "0.9.0"
+vek = "0.10.2"
