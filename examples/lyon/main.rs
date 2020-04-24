@@ -2,10 +2,7 @@ mod render;
 
 use crate::render::Render;
 use anyhow::Result;
-use lyon::{
-    extra::rust_logo::build_logo_path,
-    path::{builder::Build, Path},
-};
+use lyon::path::{builder::Build, Path};
 use miniquad::{
     conf::{Conf, Loading},
     Context, EventHandler, UserData,
@@ -16,34 +13,29 @@ type Vec2 = vek::Vec2<f64>;
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
 
-/// Our game state.
-struct Game {
+/// Our app state.
+struct App {
     /// Our wrapper around the OpenGL calls.
     render: Render,
 }
 
-impl Game {
+impl App {
     /// Setup the ECS and load the systems.
     pub fn new(ctx: &mut Context) -> Result<Self> {
         // Setup the OpenGL render part
         let mut render = Render::new(ctx);
 
         // Build a Path for the rust logo.
-        let mut builder = Path::builder().with_svg();
-        build_logo_path(&mut builder);
-        let logo_mesh = render.upload(builder.build().iter());
+        let mut builder = Path::builder();
+        let logo_mesh = render.upload_path(builder.build().iter());
 
-        for x in -100..100 {
-            for y in -100..100 {
-                logo_mesh.add_instance(Vec2::new(x as f64 * 100.0, y as f64 * 100.0));
-            }
-        }
+        logo_mesh.add_instance(Vec2::zero());
 
         Ok(Self { render })
     }
 }
 
-impl EventHandler for Game {
+impl EventHandler for App {
     fn update(&mut self, _ctx: &mut Context) {}
 
     fn draw(&mut self, ctx: &mut Context) {
@@ -55,7 +47,7 @@ impl EventHandler for Game {
 fn main() {
     miniquad::start(
         Conf {
-            window_title: concat!("siege - ", env!("CARGO_PKG_VERSION")).to_string(),
+            window_title: concat!("siege lyon example - ", env!("CARGO_PKG_VERSION")).to_string(),
             window_width: WIDTH as i32,
             window_height: HEIGHT as i32,
             loading: Loading::Embedded,
@@ -64,7 +56,7 @@ fn main() {
         },
         |mut ctx| {
             UserData::owning(
-                Game::new(&mut ctx).expect("Setting up game state failed"),
+                App::new(&mut ctx).expect("Setting up app state failed"),
                 ctx,
             )
         },

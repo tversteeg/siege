@@ -3,7 +3,7 @@ use lyon::{
     path::PathEvent,
     tessellation::{BuffersBuilder, FillAttributes, FillOptions, FillTessellator, VertexBuffers},
 };
-use miniquad::{graphics::*, Context, fs};
+use miniquad::{fs, graphics::*, Context};
 use std::{
     mem,
     sync::{Arc, Mutex},
@@ -99,13 +99,6 @@ impl Render {
             draw_calls: vec![],
             missing_bindings: false,
         }
-    }
-
-    /// Upload an SVG file.
-    ///
-    /// The path should be a file system path on desktops or a HTTP URL on WASM.
-    pub async fn upload_svg(&mut self, path: &str) -> Mesh {
-        let file = 
     }
 
     /// Upload a lyon path.

@@ -1,15 +1,15 @@
 [package]
 name = "siege"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Thomas Versteeg <thomasversteeg@gmx.com>"]
 license = "AGPL-3.0-or-later"
 edition = "2018"
 readme = "README.md"
 repository = "https://github.com/tversteeg/siege"
 documentation = "https://docs.rs/siege"
-description = ""
-keywords = []
-categories = []
+description = "Procedural siege engines generator"
+keywords = ["gamedev", "wfc", "procedural-generation"]
+categories = ["rendering", "game-engines"]
 
 [badges]
 is-it-maintained-issue-resolution = { repository = "tversteeg/siege" }
@@ -17,9 +17,13 @@ is-it-maintained-open-issues = { repository = "tversteeg/siege" }
 
 [dependencies]
 anyhow = "1.0.28"
-hibitset = "0.6.3"
-legion = "0.2.1"
-lyon = { version = "0.15.6", features = ["extra"] }
+coord_2d = "0.2.20"
+csv-core = "0.1.10"
+grid_2d = "0.14.4"
+wfc = "0.9.1"
+
+[dev-dependencies]
+anyhow = "1.0.28"
+lyon = "0.15.6"
 miniquad = "0.2.55"
-usvg = "0.9.0"
 vek = "0.10.2"
