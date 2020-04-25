@@ -71,7 +71,7 @@ jobs:
         run: |
           mkdir www
           cp target/wasm32-unknown-unknown/release/examples/*.wasm www
-          cp *.html www
+          cp examples/lyon/*.html www
 
       - name: deploy to github pages
         uses: s0/git-publish-subdir-action@master
