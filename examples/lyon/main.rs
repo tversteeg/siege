@@ -7,6 +7,7 @@ use miniquad::{
     conf::{Conf, Loading},
     Context, EventHandler, UserData,
 };
+use siege::Generator;
 
 type Vec2 = vek::Vec2<f64>;
 
@@ -45,6 +46,13 @@ impl EventHandler for App {
 }
 
 fn main() {
+    let mut generator = Generator::default();
+    let engine = generator
+        .generate_skeleton(20, 20, 100, &mut rand::thread_rng())
+        .unwrap();
+    println!("{}", engine.to_ascii());
+
+    /*
     miniquad::start(
         Conf {
             window_title: concat!("siege lyon example - ", env!("CARGO_PKG_VERSION")).to_string(),
@@ -61,4 +69,5 @@ fn main() {
             )
         },
     );
+        */
 }
