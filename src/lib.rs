@@ -22,7 +22,7 @@ use wfc::{
     RunOwn, Wrap,
 };
 
-const PATTERN_SIZE: i32 = 2;
+const PATTERN_SIZE: i32 = 3;
 
 /// A generated siege engine.
 #[derive(Debug)]
@@ -33,7 +33,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// Render the engine as ascii art.
+    /// Render the engine as ASCII art.
     pub fn to_ascii(&self) -> String {
         self.tiles
             .iter()
@@ -46,20 +46,20 @@ impl Engine {
 
 /// Grid section of the siege engine.
 ///
-/// This enum can be mapped to a number to be used in the CSV.
+/// This enum can be mapped to a number to be used in the CSV or to an ASCII character.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive)]
 pub enum Tile {
-    /// `0`: empty space.
+    /// `'0'` CSV, `' '` ASCII: empty space.
     Empty = 0,
-    /// `1`: a single wheel.
+    /// `'1'` CSV, `'o'` ASCII: a single wheel.
     Wheel = 1,
-    /// `2`: a beam connecting the tile above and the tile below.
+    /// `'2'` CSV, `'-'` ASCII: a beam connecting the tile above and the tile below.
     HorizontalBeam = 2,
-    /// `3`: a beam connecting the tile left and the tile right.
+    /// `'3'` CSV, `'|'` ASCII: a beam connecting the tile left and the tile right.
     VerticalBeam = 3,
-    /// `4`: a cross section connecting beams.
+    /// `'4'` CSV, `'+'` ASCII: a cross section connecting beams.
     Cross = 4,
-    /// `5`: a wall tile in between beams.
+    /// `'5'` CSV, `'.'` ASCII: a wall tile in between beams.
     Wall = 5,
 
     /// Edge tile, used internally.
@@ -68,7 +68,20 @@ pub enum Tile {
 }
 
 impl Tile {
-    /// Convert it to a single ascii character.
+    /// Create a tile from an ASCII character.
+    pub fn from_ascii(ascii: char) -> Self {
+        match ascii {
+            ' ' => Tile::Empty,
+            'o' => Tile::Wheel,
+            '-' => Tile::HorizontalBeam,
+            '|' => Tile::VerticalBeam,
+            '+' => Tile::Cross,
+            '.' => Tile::Wall,
+            _ => panic!("ascii character not supported"),
+        }
+    }
+
+    /// Convert it to a single ASCII character.
     pub fn to_ascii(self) -> char {
         match self {
             Tile::Empty => ' ',
@@ -139,7 +152,75 @@ impl Generator {
         })
     }
 
+    /// Use an ASCII art template.
+    ///
+    /// The symbols used are described in [`Tile`].
+    ///
+    /// [`Tile`]: enum.Tile.html
+    pub fn from_ascii<S>(ascii: S) -> Result<Self>
+    where
+        S: AsRef<str>,
+    {
+        let mut height = 0;
+        let mut tiles = vec![];
+
+        // Iterate over all the lines in the text
+        for line in ascii.as_ref().lines() {
+            // Map the text characters to tiles in a vector
+            let line_tiles = line
+                .chars()
+                .map(|ch| Tile::from_ascii(ch))
+                .collect::<Vec<_>>();
+            tiles.push(line_tiles);
+
+            height += 1;
+        }
+
+        // Get the biggest line width
+        let width = tiles
+            .iter()
+            .max_by_key(|line_tiles| line_tiles.len())
+            .ok_or_else(|| anyhow!("could not find maximum in array"))?
+            .len();
+
+        let tiles = tiles
+            .into_iter()
+            .map(|mut line_tiles| {
+                if width > line_tiles.len() {
+                    // Fill the tiles with smaller widths with empty tiles
+                    line_tiles.resize_with(width, || Tile::Empty);
+                }
+
+                line_tiles
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        Self::from_array(width as u32, height, &tiles[..])
+    }
+
+    /// Use a template from a path pointing to an ASCII file.
+    ///
+    /// The symbols used are described in [`Tile`].
+    ///
+    /// [`Tile`]: enum.Tile.html
+    pub fn from_ascii_file<P>(path: P) -> Result<Self>
+    where
+        P: AsRef<Path>,
+    {
+        // Read the file
+        let mut file_contents = String::new();
+        File::open(path)?.read_to_string(&mut file_contents)?;
+
+        // Parse it
+        Self::from_csv(file_contents)
+    }
+
     /// Use a template from CSV string.
+    ///
+    /// The symbols used are described in [`Tile`].
+    ///
+    /// [`Tile`]: enum.Tile.html
     pub fn from_csv<S>(csv: S) -> Result<Self>
     where
         S: AsRef<str>,
@@ -178,6 +259,10 @@ impl Generator {
     }
 
     /// Use a template from a path pointing to a CSV file.
+    ///
+    /// The symbols used are described in [`Tile`].
+    ///
+    /// [`Tile`]: enum.Tile.html
     pub fn from_csv_file<P>(path: P) -> Result<Self>
     where
         P: AsRef<Path>,
@@ -280,7 +365,7 @@ impl Generator {
 
 impl Default for Generator {
     fn default() -> Self {
-        Self::from_csv(include_str!("default.csv")).unwrap()
+        Self::from_ascii(include_str!("default.ascii")).unwrap()
     }
 }
 
