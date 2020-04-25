@@ -225,7 +225,7 @@ impl Generator {
 
     /// Generate a 2D grid with the output dimensions passed of a randomly generated siege engine.
     pub fn generate_skeleton<R>(
-        &mut self,
+        &self,
         output_width: u32,
         output_height: u32,
         retry_times: usize,
