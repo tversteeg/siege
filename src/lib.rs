@@ -4,7 +4,6 @@
 
 use anyhow::{anyhow, Error, Result};
 use coord_2d::{Coord, Size};
-use csv_core::{ReadFieldResult, Reader};
 use grid_2d::Grid;
 use itertools::Itertools;
 use num_derive::FromPrimitive;
@@ -46,21 +45,25 @@ impl Engine {
 
 /// Grid section of the siege engine.
 ///
-/// This enum can be mapped to a number to be used in the CSV or to an ASCII character.
+/// This enum can be mapped to an ASCII character.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, FromPrimitive)]
 pub enum Tile {
-    /// `'0'` CSV, `' '` ASCII: empty space.
-    Empty = 0,
-    /// `'1'` CSV, `'o'` ASCII: a single wheel.
-    Wheel = 1,
-    /// `'2'` CSV, `'-'` ASCII: a beam connecting the tile above and the tile below.
-    HorizontalBeam = 2,
-    /// `'3'` CSV, `'|'` ASCII: a beam connecting the tile left and the tile right.
-    VerticalBeam = 3,
-    /// `'4'` CSV, `'+'` ASCII: a cross section connecting beams.
-    Cross = 4,
-    /// `'5'` CSV, `'.'` ASCII: a wall tile in between beams.
-    Wall = 5,
+    /// `' '` ASCII: empty space.
+    Empty,
+    /// `'o'` ASCII: a single wheel.
+    Wheel,
+    /// `'-'` ASCII: a beam connecting the tile above and the tile below.
+    HorizontalBeam,
+    /// `'|'` ASCII: a beam connecting the tile left and the tile right.
+    VerticalBeam,
+    /// `'/'` ASCII: a beam connecting connecting left bottom to right top.
+    DiagonalBeam1,
+    /// `'\'` ASCII: a beam connecting connecting left top to right bottom.
+    DiagonalBeam2,
+    /// `'+'` ASCII: a cross section connecting beams.
+    Cross,
+    /// `'.'` ASCII: a wall tile in between beams.
+    Wall,
 
     /// Edge tile, used internally.
     #[doc(hidden)]
@@ -75,6 +78,8 @@ impl Tile {
             'o' => Tile::Wheel,
             '-' => Tile::HorizontalBeam,
             '|' => Tile::VerticalBeam,
+            '/' => Tile::DiagonalBeam1,
+            '\\' => Tile::DiagonalBeam2,
             '+' => Tile::Cross,
             '.' => Tile::Wall,
             _ => panic!("ascii character not supported"),
@@ -88,6 +93,8 @@ impl Tile {
             Tile::Wheel => 'o',
             Tile::HorizontalBeam => '-',
             Tile::VerticalBeam => '|',
+            Tile::DiagonalBeam1 => '/',
+            Tile::DiagonalBeam2 => '\\',
             Tile::Cross => '+',
             Tile::Wall => '.',
             Tile::Edge => panic!("this tile should've been removed from the output"),
@@ -213,66 +220,7 @@ impl Generator {
         File::open(path)?.read_to_string(&mut file_contents)?;
 
         // Parse it
-        Self::from_csv(file_contents)
-    }
-
-    /// Use a template from CSV string.
-    ///
-    /// The symbols used are described in [`Tile`].
-    ///
-    /// [`Tile`]: enum.Tile.html
-    pub fn from_csv<S>(csv: S) -> Result<Self>
-    where
-        S: AsRef<str>,
-    {
-        let mut reader = Reader::new();
-        let mut bytes = csv.as_ref().as_bytes();
-        let mut index = 0;
-        let mut height = 0;
-
-        let mut fields = vec![];
-
-        // Parse the CSV file
-        loop {
-            let (result, nin, nread) = reader.read_field(bytes, &mut [0; 1024]);
-            let field = &bytes[0..nread];
-            bytes = &bytes[nin..];
-            match result {
-                ReadFieldResult::InputEmpty => {}
-                ReadFieldResult::OutputFull => Err(anyhow!("csv field too large"))?,
-                ReadFieldResult::Field { record_end } => {
-                    // Convert the string to an integer
-                    let field_as_number = str::from_utf8(field)?.parse::<Tile>()?;
-                    fields.push(field_as_number);
-
-                    // Keep track of the size of the grid
-                    index += 1;
-                    if record_end {
-                        height += 1;
-                    }
-                }
-                ReadFieldResult::End => break,
-            }
-        }
-
-        Self::from_array(index / height, height, &fields[..])
-    }
-
-    /// Use a template from a path pointing to a CSV file.
-    ///
-    /// The symbols used are described in [`Tile`].
-    ///
-    /// [`Tile`]: enum.Tile.html
-    pub fn from_csv_file<P>(path: P) -> Result<Self>
-    where
-        P: AsRef<Path>,
-    {
-        // Read the file
-        let mut file_contents = String::new();
-        File::open(path)?.read_to_string(&mut file_contents)?;
-
-        // Parse it
-        Self::from_csv(file_contents)
+        Self::from_ascii(file_contents)
     }
 
     /// Generate a 2D grid with the output dimensions passed of a randomly generated siege engine.
