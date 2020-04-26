@@ -50,6 +50,8 @@ impl Engine {
 pub enum Tile {
     /// `' '` ASCII: empty space.
     Empty,
+    /// `'*'` ASCII: any type, will be automatically filled following an edge detection heuristic.
+    Any,
     /// `'o'` ASCII: a single wheel.
     Wheel,
     /// `'-'` ASCII: a beam connecting the tile above and the tile below.
@@ -75,6 +77,7 @@ impl Tile {
     pub fn from_ascii(ascii: char) -> Self {
         match ascii {
             ' ' => Tile::Empty,
+            '*' => Tile::Any,
             'o' => Tile::Wheel,
             '-' => Tile::HorizontalBeam,
             '|' => Tile::VerticalBeam,
@@ -90,6 +93,7 @@ impl Tile {
     pub fn to_ascii(self) -> char {
         match self {
             Tile::Empty => ' ',
+            Tile::Any => '*',
             Tile::Wheel => 'o',
             Tile::HorizontalBeam => '-',
             Tile::VerticalBeam => '|',
@@ -98,6 +102,40 @@ impl Tile {
             Tile::Cross => '+',
             Tile::Wall => '.',
             Tile::Edge => panic!("this tile should've been removed from the output"),
+        }
+    }
+
+    /// Whether a tile is either empty or an edge.
+    fn is_empty(self) -> bool {
+        self == Tile::Empty || self == Tile::Edge
+    }
+
+    /// Find the proper any tile depending on it's neighbors.
+    pub fn fill_any(index: usize, tiles: &Vec<Tile>, width: usize) -> Tile {
+        // We never have to check for boundaries since they are always edge tiles
+        let up = !tiles[index - width].is_empty();
+        let down = !tiles[index + width].is_empty();
+        let left = !tiles[index - 1].is_empty();
+        let right = !tiles[index + 1].is_empty();
+
+        if up && down && left && right {
+            // Check for corners
+            let up_left = !tiles[index - width - 1].is_empty();
+            let up_right = !tiles[index - width + 1].is_empty();
+            let down_left = !tiles[index + width - 1].is_empty();
+            let down_right = !tiles[index + width + 1].is_empty();
+
+            if !up_left || !up_right || !down_left || !down_right {
+                Tile::Cross
+            } else {
+                Tile::Wall
+            }
+        } else if up && down {
+            Tile::VerticalBeam
+        } else if left && right {
+            Tile::HorizontalBeam
+        } else {
+            Tile::Cross
         }
     }
 }
@@ -234,10 +272,13 @@ impl Generator {
     where
         R: Rng,
     {
+        let width_with_edge = output_width + 2;
+        let height_with_edge = output_height + 2;
+
         // Construct the WFC runner
         let global_stats = self.overlapping_patterns.global_stats();
         let run = RunOwn::new_forbid(
-            Size::new(output_width + 2, output_height + 2),
+            Size::new(width_with_edge, height_with_edge),
             &global_stats,
             self.force_border_forbid(),
             rng,
@@ -256,6 +297,19 @@ impl Generator {
                 self.overlapping_patterns
                     .pattern_top_left_value(pattern_id)
                     .clone()
+            })
+            .collect::<Vec<_>>();
+
+        let tiles = tiles
+            .iter()
+            // Fill in cells with an any symbol
+            .enumerate()
+            .map(|(index, tile)| {
+                if *tile == Tile::Any {
+                    Tile::fill_any(index, &tiles, width_with_edge as usize)
+                } else {
+                    *tile
+                }
             })
             // Remove all edge tiles
             .filter(|tile| *tile != Tile::Edge)
@@ -282,6 +336,9 @@ impl Generator {
         let top_right = *overlapping_grid.get_checked(Coord::new(width - 1, 0));
         let bot_right = *overlapping_grid.get_checked(Coord::new(width - 1, height - 1));
 
+        // Special one for the middle of the top so it's height matches
+        let top_mid = *overlapping_grid.get_checked(Coord::new(width / 2, 0));
+
         // Get all the patterns containing empty tiles
         let mut pattern_ids = Vec::with_capacity(width as usize * 2 + height as usize * 2);
         for x in 0..width {
@@ -307,6 +364,7 @@ impl Generator {
             bot_left,
             top_right,
             bot_right,
+            top_mid,
         }
     }
 }
@@ -325,6 +383,7 @@ struct ForceBorderForbid {
     bot_left: PatternId,
     top_right: PatternId,
     bot_right: PatternId,
+    top_mid: PatternId,
 }
 
 impl ForbidPattern for ForceBorderForbid {
@@ -340,6 +399,8 @@ impl ForbidPattern for ForceBorderForbid {
         fi.forbid_all_patterns_except(Coord::new(width - 1, 0), self.top_right, rng)
             .unwrap();
         fi.forbid_all_patterns_except(Coord::new(width - 1, height - 1), self.bot_right, rng)
+            .unwrap();
+        fi.forbid_all_patterns_except(Coord::new(width / 2, 0), self.top_mid, rng)
             .unwrap();
 
         for x in 0..width {

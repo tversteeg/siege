@@ -17,17 +17,17 @@ The `ascii` example can be used to showcase this:
 
 `example.ascii` contains the following text:
 
-```
-+-------+
-|.......|
-|.......|
-|.......|
-|.......+----+
-|.......|
-|.......|
-|.......|
-o---o---o
-```
+> ```
+> +-------+
+> |.......|
+> |.......|
+> |.......|
+> |.......+----+
+> |.......|
+> |.......|
+> |.......|
+> o---o---o
+> ```
 
 When we run the example from the command line:
 
@@ -37,12 +37,49 @@ cargo run --example ascii src/example.ascii -w 7 -h 10
 
 We might get this as an output:
 
+> ```
+> +--+
+> |..|
+> |..|
+> |..+--+
+> |..|
+> |..|
+> o--o
+> ```
+
+The `'*'` symbol can be used to let the algorithm automatically choose what edges to use:
+
+```sh
+cargo run --example ascii src/example2.ascii -w 20 -h 10
 ```
-+--+
-|..|
-|..|
-|..+--+
-|..|
-|..|
-o--o
-```
+
+`example2.ascii`:
+
+> ```
+>    ****
+>    ****
+>    ****
+> **********
+> **********
+> ***+--+***---
+> ***-  |***
+> ***-  |***
+> ***+--+***
+> **********
+> o***o****o
+> ```
+
+Might result in:
+
+> ```
+>       +--+
+>       |..|
+> +--+  |..+--+
+> |..|  |.....|
+> |..|  |.....+-------
+> |..+--+.....|
+> |...........|
+> |...........|
+> |...........|
+> o-----------o
+> ```
