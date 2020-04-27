@@ -7,7 +7,6 @@ use miniquad::{
     conf::{Conf, Loading},
     Context, EventHandler, UserData,
 };
-use siege::Generator;
 
 type Vec2 = vek::Vec2<f64>;
 
@@ -26,11 +25,23 @@ impl App {
         // Setup the OpenGL render part
         let mut render = Render::new(ctx);
 
-        // Build a Path for the rust logo.
-        let mut builder = Path::builder();
-        let logo_mesh = render.upload_path(builder.build().iter());
+        // Use the default engine template
+        let generator = siege::Generator::default();
+
+        // Generate the skeleton
+        let engine = generator
+            .generate_skeleton(20, 20, 100, &mut rand::thread_rng())
+            .unwrap();
+
+        // Convert it to a vector path
+        let path = engine.to_svg(10.0);
+
+        /*
+        // Upload it to the GPU
+        let logo_mesh = render.upload_path(path.iter());
 
         logo_mesh.add_instance(Vec2::zero());
+        */
 
         Ok(Self { render })
     }
@@ -46,13 +57,6 @@ impl EventHandler for App {
 }
 
 fn main() {
-    let mut generator = Generator::default();
-    let engine = generator
-        .generate_skeleton(20, 20, 100, &mut rand::thread_rng())
-        .unwrap();
-    println!("{}", engine.to_ascii());
-
-    /*
     miniquad::start(
         Conf {
             window_title: concat!("siege lyon example - ", env!("CARGO_PKG_VERSION")).to_string(),
@@ -69,5 +73,4 @@ fn main() {
             )
         },
     );
-        */
 }

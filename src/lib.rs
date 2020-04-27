@@ -1,6 +1,67 @@
 //! Procedurally generated siege engine generator.
 //!
 //! This library uses wave function collapse to generate an engine from a grid.
+//!
+//! The `physics` & `vector` features are enabled by default and can be disabled if no dependencies
+//! on `lyon` or `nphysics2d` are warranted.
+//!
+//! # Examples
+//!
+//! ## ASCII
+//!
+//! ```rust
+//! # fn main() -> anyhow::Result<()> {
+//! // Define a simple siege engine as an ASCII string
+//! let engine_template = r#"
+//! +-----+
+//! |.....|
+//! |.....|
+//! |.....|
+//! |.....|
+//! o-----o
+//! "#;
+//!
+//! // Parse the ASCII template
+//! let generator = siege::Generator::from_ascii(engine_template)?;
+//!
+//! // Generate new skeleton with a width of 12, a height of 10 and 100 retries
+//! match generator.generate_skeleton(12, 10, 100, &mut rand::thread_rng()) {
+//!     Some(engine) => {
+//!         // Generation succeeded, print it out as ASCII
+//!         println!("{}", engine.to_ascii());
+//!     },
+//!     None => {
+//!         eprintln!("Generating siege engine failed");
+//!     }
+//! }
+//! # Ok(()) }
+//! ```
+//!
+//! ## SVG
+//!
+//! ```rust
+//! # fn main() -> anyhow::Result<()> {
+//! // Define a simple siege engine as an ASCII string
+//! let engine_template = r#"
+//! +-----+
+//! |.....|
+//! |.....|
+//! |.....|
+//! |.....|
+//! o-----o
+//! "#;
+//!
+//! // Parse the ASCII template
+//! let generator = siege::Generator::from_ascii(engine_template)?;
+//!
+//! // Generate new skeleton with a width of 12, a height of 10 and 100 retries
+//! let engine = generator.generate_skeleton(12, 10, 100, &mut rand::thread_rng()).unwrap();
+//!
+//! // Convert it to an SVG image with everything scaled 2 times
+//! let svg_str = engine.to_svg(2.0);
+//! println!("{}", svg_str);
+//! # Ok(()) }
+//! ```
 
 use anyhow::{anyhow, Error, Result};
 use coord_2d::{Coord, Size};
@@ -9,6 +70,7 @@ use itertools::Itertools;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use rand::Rng;
+use simplesvg::{Attr, ColorAttr::Color, Fig, Svg};
 use std::{
     fs::File,
     io::Read,
@@ -40,6 +102,61 @@ impl Engine {
             .into_iter()
             .map(|row| row.map(|tile| tile.to_ascii()).collect::<String>())
             .join("\n")
+    }
+
+    /// Render the engine as an SVG image.
+    pub fn to_svg(&self, scale: f32) -> String {
+        let beam_attr = Attr::default()
+            .fill(Color(0x9B, 0x4C, 0x51))
+            .stroke(Color(0x52, 0x3B, 0x40))
+            .stroke_width(20.0 / scale);
+
+        // Convert the grid of tiles to SVG shapes
+        let figures = self
+            .to_grid()
+            .enumerate()
+            .map(|(coord, tile)| {
+                let x = coord.x as f32 * scale + scale;
+                let y = coord.y as f32 * scale + scale;
+
+                match tile {
+                    Tile::Wall => vec![Fig::Rect(x, y, scale, scale).styled(beam_attr.clone())],
+                    Tile::Wheel => vec![Fig::Circle(x + scale / 2.0, y + scale / 2.0, scale / 2.0)
+                        .styled(beam_attr.clone())],
+                    _ => vec![],
+                }
+            })
+            .flatten()
+            .collect();
+
+        Svg(
+            figures,
+            ((self.width + 2) as f32 * scale) as u32,
+            ((self.height + 2) as f32 * scale) as u32,
+        )
+        .to_string()
+    }
+
+    /// The tiles array as a grid.
+    pub fn to_grid(&self) -> Grid<Tile> {
+        Grid::new_fn(Size::new(self.width, self.height), |coord| {
+            self.tiles[(coord.y * (self.width as i32) + coord.x) as usize]
+        })
+    }
+
+    /// The array tiles as a one dimensional vector.
+    pub fn tiles(&self) -> &Vec<Tile> {
+        &self.tiles
+    }
+
+    /// Amount of tiles in a row.
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Amount of tiles in a column.
+    pub fn height(&self) -> u32 {
+        self.height
     }
 }
 
@@ -211,6 +328,11 @@ impl Generator {
 
         // Iterate over all the lines in the text
         for line in ascii.as_ref().lines() {
+            // Skip empty lines
+            if line.is_empty() {
+                continue;
+            }
+
             // Map the text characters to tiles in a vector
             let line_tiles = line
                 .chars()
