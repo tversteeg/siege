@@ -1,9 +1,14 @@
+use anyhow::Result;
 use lyon::{
     math::Point,
     path::PathEvent,
-    tessellation::{BuffersBuilder, FillAttributes, FillOptions, FillTessellator, VertexBuffers},
+    tessellation::{
+        geometry_builder::{FillVertexConstructor, StrokeVertexConstructor},
+        BuffersBuilder, FillAttributes, FillOptions, FillTessellator, LineCap, LineJoin,
+        StrokeAttributes, StrokeOptions, StrokeTessellator, VertexBuffers,
+    },
 };
-use miniquad::{fs, graphics::*, Context};
+use miniquad::{graphics::*, Context};
 use std::{
     mem,
     sync::{Arc, Mutex},
@@ -88,8 +93,9 @@ impl Render {
                 },
             ],
             &[
-                VertexAttribute::with_buffer("pos", VertexFormat::Float2, 0),
-                VertexAttribute::with_buffer("inst_pos", VertexFormat::Float2, 1),
+                VertexAttribute::with_buffer("a_pos", VertexFormat::Float2, 0),
+                VertexAttribute::with_buffer("a_color", VertexFormat::Float4, 0),
+                VertexAttribute::with_buffer("a_inst_pos", VertexFormat::Float2, 1),
             ],
             shader,
         );
@@ -146,6 +152,79 @@ impl Render {
         Mesh(draw_call)
     }
 
+    /// Upload a SVG.
+    ///
+    /// Returns a reference that can be used to add instances.
+    pub fn upload_svg<S>(&mut self, svg: S) -> Result<Mesh>
+    where
+        S: AsRef<str>,
+    {
+        // Tessalate the path, converting it to vertices & indices
+        let mut geometry: VertexBuffers<Vertex, u16> = VertexBuffers::new();
+
+        let mut fill_tess = FillTessellator::new();
+        let mut stroke_tess = StrokeTessellator::new();
+
+        let rtree = usvg::Tree::from_str(svg.as_ref(), &usvg::Options::default())?;
+        // Loop over all nodes in the SVG tree
+        for node in rtree.root().descendants() {
+            if let usvg::NodeKind::Path(ref path) = *node.borrow() {
+                if let Some(ref fill) = path.fill {
+                    // Get the fill color
+                    let color = match fill.paint {
+                        usvg::Paint::Color(color) => color,
+                        _ => todo!("Color not defined"),
+                    };
+
+                    // Tessellate the fill
+                    fill_tess
+                        .tessellate(
+                            convert_path(path),
+                            &FillOptions::tolerance(0.01),
+                            &mut BuffersBuilder::new(
+                                &mut geometry,
+                                VertexCtor::new(color, fill.opacity.value() as f32),
+                            ),
+                        )
+                        .expect("Tessellation failed");
+                }
+
+                if let Some(ref stroke) = path.stroke {
+                    let (color, stroke_opts) = convert_stroke(stroke);
+                    // Tessellate the stroke
+                    let _ = stroke_tess.tessellate(
+                        convert_path(path),
+                        &stroke_opts.with_tolerance(0.01),
+                        &mut BuffersBuilder::new(
+                            &mut geometry,
+                            VertexCtor::new(color, stroke.opacity.value() as f32),
+                        ),
+                    );
+                }
+            }
+        }
+
+        let vertices = geometry.vertices.clone();
+        let indices = geometry.indices.clone();
+
+        // Create an OpenGL draw call for the path
+        let draw_call = Arc::new(Mutex::new(DrawCall {
+            vertices,
+            indices,
+            bindings: None,
+            instances: vec![],
+            instance_positions: vec![],
+            refresh_instances: false,
+        }));
+        self.draw_calls.push(draw_call.clone());
+
+        // Tell the next render loop to create bindings for this
+        self.missing_bindings = true;
+
+        // Return the draw call in a newtype struct so it can be used as a reference
+        Ok(Mesh(draw_call))
+    }
+
     /// Render the graphics.
     pub fn render(&mut self, ctx: &mut Context) {
         let (width, height) = ctx.screen_size();
@@ -175,7 +254,7 @@ impl Render {
 
         // Render the separate draw calls
         for dc in self.draw_calls.iter_mut() {
-            let mut dc = dc.lock().unwrap();
+            let dc = dc.lock().unwrap();
 
             // Only render when we actually have instances
             if dc.instances.is_empty() {
@@ -188,7 +267,8 @@ impl Render {
             ctx.apply_scissor_rect(0, 0, width as i32, height as i32);
             ctx.apply_bindings(bindings);
             ctx.apply_uniforms(&Uniforms {
-                resolution: (width, height),
+                zoom: (2.0 / width, 2.0 / height),
+                pan: (-width / 2.0, -height / 2.0),
             });
             ctx.draw(0, dc.indices.len() as i32, dc.instances.len() as i32);
         }
@@ -244,21 +324,14 @@ impl DrawCall {
 #[derive(Debug, Copy, Clone, Default)]
 struct Vertex {
     pos: [f32; 2],
-}
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-struct Primitive {
     color: [f32; 4],
-    translate: [f32; 2],
-    z_index: i32,
-    width: f32,
 }
 
 #[repr(C)]
 #[derive(Debug)]
 struct Uniforms {
-    resolution: (f32, f32),
+    zoom: (f32, f32),
+    pan: (f32, f32),
 }
 
 #[repr(C)]
@@ -267,32 +340,207 @@ struct Instance {
     position: [f32; 2],
 }
 
+/// Used by lyon to create vertices.
+struct VertexCtor {
+    color: [f32; 4],
+}
+
+impl VertexCtor {
+    pub fn new(color: usvg::Color, alpha: f32) -> Self {
+        Self {
+            color: [
+                color.red as f32 / 255.0,
+                color.green as f32 / 255.0,
+                color.blue as f32 / 255.0,
+                alpha,
+            ],
+        }
+    }
+}
+
+impl FillVertexConstructor<Vertex> for VertexCtor {
+    fn new_vertex(&mut self, position: Point, _: FillAttributes) -> Vertex {
+        Vertex {
+            pos: position.to_array(),
+            color: self.color,
+        }
+    }
+}
+
+impl StrokeVertexConstructor<Vertex> for VertexCtor {
+    fn new_vertex(&mut self, position: Point, _: StrokeAttributes) -> Vertex {
+        Vertex {
+            pos: position.to_array(),
+            color: self.color,
+        }
+    }
+}
+
+struct PathConvIter<'a> {
+    iter: std::slice::Iter<'a, usvg::PathSegment>,
+    prev: Point,
+    first: Point,
+    needs_end: bool,
+    deferred: Option<PathEvent>,
+}
+
+impl<'l> Iterator for PathConvIter<'l> {
+    type Item = PathEvent;
+    fn next(&mut self) -> Option<PathEvent> {
+        if self.deferred.is_some() {
+            return self.deferred.take();
+        }
+
+        let next = self.iter.next();
+        match next {
+            Some(usvg::PathSegment::MoveTo { x, y }) => {
+                if self.needs_end {
+                    let last = self.prev;
+                    let first = self.first;
+                    self.needs_end = false;
+                    self.prev = point(x, y);
+                    self.deferred = Some(PathEvent::Begin { at: self.prev });
+                    self.first = self.prev;
+                    Some(PathEvent::End {
+                        last,
+                        first,
+                        close: false,
+                    })
+                } else {
+                    self.first = point(x, y);
+                    Some(PathEvent::Begin { at: self.first })
+                }
+            }
+            Some(usvg::PathSegment::LineTo { x, y }) => {
+                self.needs_end = true;
+                let from = self.prev;
+                self.prev = point(x, y);
+                Some(PathEvent::Line {
+                    from,
+                    to: self.prev,
+                })
+            }
+            Some(usvg::PathSegment::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            }) => {
+                self.needs_end = true;
+                let from = self.prev;
+                self.prev = point(x, y);
+                Some(PathEvent::Cubic {
+                    from,
+                    ctrl1: point(x1, y1),
+                    ctrl2: point(x2, y2),
+                    to: self.prev,
+                })
+            }
+            Some(usvg::PathSegment::ClosePath) => {
+                self.needs_end = false;
+                self.prev = self.first;
+                Some(PathEvent::End {
+                    last: self.prev,
+                    first: self.first,
+                    close: true,
+                })
+            }
+            None => {
+                if self.needs_end {
+                    self.needs_end = false;
+                    let last = self.prev;
+                    let first = self.first;
+                    Some(PathEvent::End {
+                        last,
+                        first,
+                        close: false,
+                    })
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+fn point(x: &f64, y: &f64) -> Point {
+    Point::new((*x) as f32, (*y) as f32)
+}
+
+fn convert_path<'a>(p: &'a usvg::Path) -> PathConvIter<'a> {
+    PathConvIter {
+        iter: p.data.iter(),
+        first: Point::new(0.0, 0.0),
+        prev: Point::new(0.0, 0.0),
+        deferred: None,
+        needs_end: false,
+    }
+}
+
+fn convert_stroke(s: &usvg::Stroke) -> (usvg::Color, StrokeOptions) {
+    let color = match s.paint {
+        usvg::Paint::Color(c) => c,
+        _ => todo!("No fallback color"),
+    };
+    let linecap = match s.linecap {
+        usvg::LineCap::Butt => LineCap::Butt,
+        usvg::LineCap::Square => LineCap::Square,
+        usvg::LineCap::Round => LineCap::Round,
+    };
+    let linejoin = match s.linejoin {
+        usvg::LineJoin::Miter => LineJoin::Miter,
+        usvg::LineJoin::Bevel => LineJoin::Bevel,
+        usvg::LineJoin::Round => LineJoin::Round,
+    };
+
+    let opt = StrokeOptions::tolerance(0.01)
+        .with_line_width(s.width.value() as f32)
+        .with_line_cap(linecap)
+        .with_line_join(linejoin);
+
+    (color, opt)
+}
+
 mod shader {
     use miniquad::graphics::*;
 
     pub const VERTEX: &str = r#"#version 100
-attribute vec2 pos;
-attribute vec2 inst_pos;
 
-uniform vec2 resolution;
+uniform vec2 u_zoom;
+uniform vec2 u_pan;
+
+attribute vec2 a_pos;
+attribute vec4 a_color;
+attribute vec2 a_inst_pos;
+
+varying lowp vec4 color;
 
 void main() {
-    vec2 world_pos = (pos + inst_pos) / (vec2(0.5, -0.5) * resolution);
+    vec2 pos = a_pos + a_inst_pos + u_pan;
+    gl_Position = vec4(pos * vec2(1.0, -1.0) * u_zoom, 0.0, 1.0);
 
-    gl_Position = vec4(world_pos, 0.0, 1.0);
+    color = a_color;
 }
 "#;
 
     pub const FRAGMENT: &str = r#"#version 100
 
+varying lowp vec4 color;
+
 void main() {
-    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-}"#;
+    gl_FragColor = color;
+}
+"#;
 
     pub const META: ShaderMeta = ShaderMeta {
         images: &[],
         uniforms: UniformBlockLayout {
-            uniforms: &[("resolution", UniformType::Float2)],
+            uniforms: &[
+                UniformDesc::new("u_zoom", UniformType::Float2),
+                UniformDesc::new("u_pan", UniformType::Float2),
+            ],
         },
     };
 }

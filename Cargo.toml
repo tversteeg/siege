@@ -32,7 +32,8 @@ simplesvg = "0.4.0"
 wfc = "0.9.1"
 
 [dev-dependencies]
-miniquad = "0.2.55"
+miniquad = { git = "https://github.com/tversteeg/miniquad", branch = "patch-1" }
 structopt = "0.3.14"
 vek = "0.10.2"
 lyon = "0.15.8"
+usvg = "0.9.0"

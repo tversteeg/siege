@@ -2,7 +2,6 @@ mod render;
 
 use crate::render::Render;
 use anyhow::Result;
-use lyon::path::{builder::Build, Path};
 use miniquad::{
     conf::{Conf, Loading},
     Context, EventHandler, UserData,
@@ -34,14 +33,12 @@ impl App {
             .unwrap();
 
         // Convert it to a vector path
-        let path = engine.to_svg(10.0);
+        let svg = engine.to_svg(30.0);
 
-        /*
         // Upload it to the GPU
-        let logo_mesh = render.upload_path(path.iter());
+        let logo_mesh = render.upload_svg(svg)?;
 
         logo_mesh.add_instance(Vec2::zero());
-        */
 
         Ok(Self { render })
     }
