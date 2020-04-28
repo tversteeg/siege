@@ -106,10 +106,12 @@ impl Engine {
 
     /// Render the engine as an SVG image.
     pub fn to_svg(&self, scale: f32) -> String {
+        let background_attr = Attr::default().fill(Color(0x9B, 0x4C, 0x51));
+
         let beam_attr = Attr::default()
             .fill(Color(0x9B, 0x4C, 0x51))
             .stroke(Color(0x52, 0x3B, 0x40))
-            .stroke_width(20.0 / scale);
+            .stroke_width(100.0 / scale);
 
         // Convert the grid of tiles to SVG shapes
         let figures = self
@@ -120,7 +122,22 @@ impl Engine {
                 let y = coord.y as f32 * scale + scale;
 
                 match tile {
-                    Tile::Wall => vec![Fig::Rect(x, y, scale, scale).styled(beam_attr.clone())],
+                    Tile::Wall => {
+                        vec![Fig::Rect(x, y, scale, scale).styled(background_attr.clone())]
+                    }
+                    Tile::HorizontalBeam => {
+                        vec![Fig::Rect(x, y + scale / 4.0, scale, scale / 2.0)
+                            .styled(beam_attr.clone())]
+                    }
+                    Tile::VerticalBeam => {
+                        vec![Fig::Rect(x + scale / 4.0, y, scale / 2.0, scale)
+                            .styled(beam_attr.clone())]
+                    }
+                    Tile::Cross => vec![Fig::Multiple(vec![
+                        Fig::Rect(x + scale / 4.0, y, scale / 2.0, scale),
+                        Fig::Rect(x, y + scale / 4.0, scale, scale / 2.0),
+                    ])
+                    .styled(beam_attr.clone())],
                     Tile::Wheel => vec![Fig::Circle(x + scale / 2.0, y + scale / 2.0, scale / 2.0)
                         .styled(beam_attr.clone())],
                     _ => vec![],
