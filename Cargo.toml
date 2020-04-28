@@ -24,16 +24,21 @@ anyhow = "1.0.28"
 coord_2d = "0.2.20"
 grid_2d = "0.14.4"
 itertools = "0.9.0"
-nphysics2d = { version = "0.14.0", optional = true }
 num-derive = "0.3.0"
 num-traits = "0.2.11"
 rand = "0.7.3"
 simplesvg = "0.4.0"
 wfc = "0.9.1"
 
+[dependencies.nphysics2d]
+version = "0.14.0"
+optional = true
+default-features = false
+features = ["dim2"]
+
 [dev-dependencies]
 miniquad = { git = "https://github.com/tversteeg/miniquad", branch = "patch-1" }
 structopt = "0.3.14"
 vek = "0.10.2"
 lyon = "0.15.8"
-usvg = "0.9.0"
+usvg = { version = "0.9.0", default_features = false }
